@@ -21,9 +21,11 @@
   <depend>etsi_its_cam_ts_conversion</depend>
   <depend>etsi_its_conversion_srvs</depend>
   <depend>etsi_its_cpm_ts_conversion</depend>
+  <depend>etsi_its_asm_conversion</depend>
   <depend>etsi_its_denm_conversion</depend>
   <depend>etsi_its_denm_ts_conversion</depend>
   <depend>etsi_its_mapem_ts_conversion</depend>
+  <depend>etsi_its_mcm_conversion</depend>
   <depend>etsi_its_mcm_uulm_conversion</depend>
   <depend>etsi_its_spatem_ts_conversion</depend>
   <depend>etsi_its_vam_ts_conversion</depend>

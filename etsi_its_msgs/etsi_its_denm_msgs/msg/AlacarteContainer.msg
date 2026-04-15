@@ -41,7 +41,9 @@
 # 	roadWorks RoadWorksContainerExtended OPTIONAL,
 # 	positioningSolution PositioningSolutionType OPTIONAL,
 # 	stationaryVehicle StationaryVehicleContainer OPTIONAL,
-# 	...
+# 	...,
+# 	wrongWayDriver              WrongWayDriverContainer OPTIONAL,
+# 	shortTermConstructionSite ShortTermConstructionSiteContainer OPTIONAL
 # }
 # ------------------------------------------------------------------------------
 
@@ -62,4 +64,10 @@ bool positioning_solution_is_present
 
 StationaryVehicleContainer stationary_vehicle
 bool stationary_vehicle_is_present
+
+WrongWayDriverContainer wrong_way_driver
+bool wrong_way_driver_is_present
+
+ShortTermConstructionSiteContainer short_term_construction_site
+bool short_term_construction_site_is_present
 

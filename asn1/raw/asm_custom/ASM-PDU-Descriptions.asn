@@ -1,0 +1,30 @@
+ASM-PDU-Descriptions {
+	itu-t(0) identified-organization(4) etsi(0) itsDomain(5) wg1(1) asm(1) version(1)
+}
+
+DEFINITIONS AUTOMATIC TAGS ::=
+
+BEGIN
+
+IMPORTS
+	ItsPduHeader, TimestampIts FROM ITS-Container { itu-t (0) identified-organization (4) etsi (0) itsDomain (5) wg1 (1) ts (102894) cdd (2) version (2)
+};
+
+-- ASM--
+ASM ::=SEQUENCE {
+    header	ItsPduHeader,
+    generationTime TimestampIts,
+    applicationIdentifier ApplicationIdentifier,
+    payload		ApplicationSpecificMessage
+}
+
+ApplicationSpecificMessage ::=SEQUENCE{
+	data ApplicationSpecificData,
+	...
+}
+
+ApplicationIdentifier ::= INTEGER {undefined(0)} (0..255) 
+
+ApplicationSpecificData ::= OCTET STRING
+
+END

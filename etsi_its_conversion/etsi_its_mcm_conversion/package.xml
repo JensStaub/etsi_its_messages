@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+
+  <name>etsi_its_mcm_conversion</name>
+  <version>1.0.0</version>
+  <description>Conversion functions for converting ROS messages to and from ASN.1-encoded ETSI ITS MCMs</description>
+
+  <maintainer email="maintainer@example.com">Maintainer</maintainer>
+
+  <license>MIT</license>
+
+  <depend>etsi_its_mcm_coding</depend>
+  <depend>etsi_its_mcm_msgs</depend>
+  <depend>etsi_its_primitives_conversion</depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>

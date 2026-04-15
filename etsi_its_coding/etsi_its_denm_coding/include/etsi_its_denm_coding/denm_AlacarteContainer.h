@@ -25,6 +25,8 @@ extern "C" {
 struct denm_ImpactReductionContainer;
 struct denm_RoadWorksContainerExtended;
 struct denm_StationaryVehicleContainer;
+struct denm_WrongWayDriverContainer;
+struct denm_ShortTermConstructionSiteContainer;
 
 /* denm_AlacarteContainer */
 typedef struct denm_AlacarteContainer {
@@ -38,6 +40,8 @@ typedef struct denm_AlacarteContainer {
 	 * This type is extensible,
 	 * possible extensions are below.
 	 */
+	struct denm_WrongWayDriverContainer	*wrongWayDriver;	/* OPTIONAL */
+	struct denm_ShortTermConstructionSiteContainer	*shortTermConstructionSite;	/* OPTIONAL */
 	
 	/* Context for parsing across buffer boundaries */
 	asn_struct_ctx_t _asn_ctx;
@@ -46,7 +50,7 @@ typedef struct denm_AlacarteContainer {
 /* Implementation */
 extern asn_TYPE_descriptor_t asn_DEF_denm_AlacarteContainer;
 extern asn_SEQUENCE_specifics_t asn_SPC_denm_AlacarteContainer_specs_1;
-extern asn_TYPE_member_t asn_MBR_denm_AlacarteContainer_1[6];
+extern asn_TYPE_member_t asn_MBR_denm_AlacarteContainer_1[8];
 
 #ifdef __cplusplus
 }
@@ -56,6 +60,8 @@ extern asn_TYPE_member_t asn_MBR_denm_AlacarteContainer_1[6];
 #include "etsi_its_denm_coding/denm_ImpactReductionContainer.h"
 #include "etsi_its_denm_coding/denm_RoadWorksContainerExtended.h"
 #include "etsi_its_denm_coding/denm_StationaryVehicleContainer.h"
+#include "etsi_its_denm_coding/denm_WrongWayDriverContainer.h"
+#include "etsi_its_denm_coding/denm_ShortTermConstructionSiteContainer.h"
 
 #endif	/* _denm_AlacarteContainer_H_ */
 #include <etsi_its_denm_coding/asn_internal.h>

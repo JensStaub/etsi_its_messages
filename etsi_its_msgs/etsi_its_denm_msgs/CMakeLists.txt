@@ -81,6 +81,7 @@ set(msg_files
   "msg/RoadworksSubCauseCode.msg"
   "msg/SemiAxisLength.msg"
   "msg/SequenceNumber.msg"
+  "msg/ShortTermConstructionSiteContainer.msg"
   "msg/SignalViolationSubCauseCode.msg"
   "msg/SituationContainer.msg"
   "msg/SlowVehicleSubCauseCode.msg"
@@ -109,6 +110,7 @@ set(msg_files
   "msg/VehicleMass.msg"
   "msg/WMInumber.msg"
   "msg/WheelBaseVehicle.msg"
+  "msg/WrongWayDriverContainer.msg"
   "msg/WrongWayDrivingSubCauseCode.msg"
 )
 

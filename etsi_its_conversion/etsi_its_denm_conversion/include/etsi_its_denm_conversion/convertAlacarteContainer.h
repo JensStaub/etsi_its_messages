@@ -41,7 +41,9 @@ AlacarteContainer ::= SEQUENCE {
 	roadWorks RoadWorksContainerExtended OPTIONAL,
 	positioningSolution PositioningSolutionType OPTIONAL,
 	stationaryVehicle StationaryVehicleContainer OPTIONAL,
-	...
+	...,
+	wrongWayDriver              WrongWayDriverContainer OPTIONAL,
+	shortTermConstructionSite ShortTermConstructionSiteContainer OPTIONAL
 }
 ----------------------------------------------------------------------------- */
 
@@ -52,8 +54,10 @@ AlacarteContainer ::= SEQUENCE {
 #include <etsi_its_denm_conversion/convertLanePosition.h>
 #include <etsi_its_denm_conversion/convertPositioningSolutionType.h>
 #include <etsi_its_denm_conversion/convertRoadWorksContainerExtended.h>
+#include <etsi_its_denm_conversion/convertShortTermConstructionSiteContainer.h>
 #include <etsi_its_denm_conversion/convertStationaryVehicleContainer.h>
 #include <etsi_its_denm_conversion/convertTemperature.h>
+#include <etsi_its_denm_conversion/convertWrongWayDriverContainer.h>
 #include <etsi_its_denm_msgs/msg/alacarte_container.hpp>
 namespace denm_msgs = etsi_its_denm_msgs::msg;
 
@@ -85,6 +89,14 @@ void toRos_AlacarteContainer(const denm_AlacarteContainer_t& in, denm_msgs::Alac
     toRos_StationaryVehicleContainer(*in.stationaryVehicle, out.stationary_vehicle);
     out.stationary_vehicle_is_present = true;
   }
+  if (in.wrongWayDriver) {
+    toRos_WrongWayDriverContainer(*in.wrongWayDriver, out.wrong_way_driver);
+    out.wrong_way_driver_is_present = true;
+  }
+  if (in.shortTermConstructionSite) {
+    toRos_ShortTermConstructionSiteContainer(*in.shortTermConstructionSite, out.short_term_construction_site);
+    out.short_term_construction_site_is_present = true;
+  }
 }
 
 void toStruct_AlacarteContainer(const denm_msgs::AlacarteContainer& in, denm_AlacarteContainer_t& out) {
@@ -112,6 +124,14 @@ void toStruct_AlacarteContainer(const denm_msgs::AlacarteContainer& in, denm_Ala
   if (in.stationary_vehicle_is_present) {
     out.stationaryVehicle = (denm_StationaryVehicleContainer_t*) calloc(1, sizeof(denm_StationaryVehicleContainer_t));
     toStruct_StationaryVehicleContainer(in.stationary_vehicle, *out.stationaryVehicle);
+  }
+  if (in.wrong_way_driver_is_present) {
+    out.wrongWayDriver = (denm_WrongWayDriverContainer_t*) calloc(1, sizeof(denm_WrongWayDriverContainer_t));
+    toStruct_WrongWayDriverContainer(in.wrong_way_driver, *out.wrongWayDriver);
+  }
+  if (in.short_term_construction_site_is_present) {
+    out.shortTermConstructionSite = (denm_ShortTermConstructionSiteContainer_t*) calloc(1, sizeof(denm_ShortTermConstructionSiteContainer_t));
+    toStruct_ShortTermConstructionSiteContainer(in.short_term_construction_site, *out.shortTermConstructionSite);
   }
 }
 

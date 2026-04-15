@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="3">
+
+  <name>etsi_its_mcm_coding</name>
+  <version>1.0.0</version>
+  <description>C++ compatible C source code for ETSI ITS MCMs generated from ASN.1 using asn1c</description>
+
+  <maintainer email="maintainer@example.com">Maintainer</maintainer>
+
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>
