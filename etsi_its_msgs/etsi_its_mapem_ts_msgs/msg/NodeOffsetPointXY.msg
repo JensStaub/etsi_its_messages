@@ -71,3 +71,5 @@ uint8 CHOICE_NODE_XY6 = 5
 NodeLLmD64b node_lat_lon
 uint8 CHOICE_NODE_LAT_LON = 6
 
+uint8 CHOICE_REGIONAL = 7
+

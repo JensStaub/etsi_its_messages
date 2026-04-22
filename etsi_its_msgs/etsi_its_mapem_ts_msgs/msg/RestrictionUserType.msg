@@ -50,3 +50,5 @@ uint8 choice
 RestrictionAppliesTo basic_type
 uint8 CHOICE_BASIC_TYPE = 0
 
+uint8 CHOICE_REGIONAL = 1
+
