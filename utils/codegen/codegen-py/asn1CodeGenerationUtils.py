@@ -39,6 +39,95 @@ logging.addLevelName(logging.ERROR, "\033[1;31m%s\033[1;0m" % logging.getLevelNa
 AUTO_GENERATE_COMMAND = "python3 " + " ".join(sys.argv)
 
 
+def findCyclicEdges(asn1_types: Dict[str, Dict]) -> set:
+    """Find (parent_type, child_type) edges that form cycles using DFS backedge detection.
+
+    Returns the minimal set of edges to cut in order to make the type dependency graph acyclic.
+    For each cycle, selects the edge whose target has the most incoming edges from OUTSIDE the
+    cycle — so that cutting it leaves the target reachable via alternative paths.
+    """
+    def direct_deps(type_name):
+        t = asn1_types.get(type_name)
+        if t is None:
+            return []
+        deps = []
+        for m in t.get("members", []):
+            if m is None:
+                continue
+            items = m if isinstance(m, list) else [m]
+            for item in items:
+                if isinstance(item, dict):
+                    mt = item.get("type")
+                    if mt and mt in asn1_types:
+                        deps.append(mt)
+        if isinstance(t.get("element"), dict):
+            et = t["element"].get("type")
+            if et and et in asn1_types:
+                deps.append(et)
+        return deps
+
+    # Pre-compute incoming edges for each type
+    incoming: Dict[str, List[str]] = {t: [] for t in asn1_types}
+    for t in asn1_types:
+        for d in direct_deps(t):
+            incoming[d].append(t)
+
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color = {t: WHITE for t in asn1_types}
+    cyclic_edges = set()
+    dfs_path: List[str] = []
+
+    def best_cut_for_cycle(u: str, v: str) -> tuple:
+        """Given backedge (u→v) where v is a DFS ancestor, pick the best edge in the cycle to cut.
+
+        Prefers edges (a→b) where b has the most incoming edges from outside the cycle,
+        so that b remains reachable after the cut.
+        """
+        idx = dfs_path.index(v)
+        cycle_path = dfs_path[idx:]  # nodes from v to u (inclusive)
+        cycle_nodes = set(cycle_path)
+
+        # Forward edges in cycle + the backedge
+        candidate_edges = [(cycle_path[i], cycle_path[i + 1]) for i in range(len(cycle_path) - 1)]
+        candidate_edges.append((u, v))
+
+        best_edge = (u, v)
+        best_ext = sum(1 for src in incoming[v] if src not in cycle_nodes)
+
+        for a, b in candidate_edges:
+            ext = sum(1 for src in incoming[b] if src not in cycle_nodes)
+            if ext > best_ext:
+                best_ext = ext
+                best_edge = (a, b)
+
+        return best_edge
+
+    def dfs(u):
+        color[u] = GRAY
+        dfs_path.append(u)
+        for v in direct_deps(u):
+            if (u, v) in cyclic_edges:
+                continue
+            if color[v] == GRAY:
+                # Found a backedge: check if the cycle is already broken by a previous cut
+                idx = dfs_path.index(v)
+                cycle_path = dfs_path[idx:]
+                cycle_edges_in_path = [(cycle_path[i], cycle_path[i + 1]) for i in range(len(cycle_path) - 1)]
+                cycle_edges_in_path.append((u, v))
+                if not any(e in cyclic_edges for e in cycle_edges_in_path):
+                    cyclic_edges.add(best_cut_for_cycle(u, v))
+            elif color[v] == WHITE:
+                dfs(v)
+        dfs_path.pop()
+        color[u] = BLACK
+
+    for t in asn1_types:
+        if color[t] == WHITE:
+            dfs(t)
+
+    return cyclic_edges
+
+
 ASN1_PRIMITIVES_2_ROS = {
     "BOOLEAN": "bool",
     "INTEGER": "int64",
@@ -428,7 +517,7 @@ def checkTypeMembersInAsn1(asn1_types: Dict[str, Dict]):
                         f"in '{asn1_type_name}' is undefined")
 
 
-def asn1TypeToJinjaContext(asn1_type_name: str, asn1_type_info: Dict, asn1_types: Dict[str, Dict], asn1_values: Dict[str, Dict], asn1_sets: Dict[str, Dict], asn1_classes: Dict[str, Dict]) -> Dict:
+def asn1TypeToJinjaContext(asn1_type_name: str, asn1_type_info: Dict, asn1_types: Dict[str, Dict], asn1_values: Dict[str, Dict], asn1_sets: Dict[str, Dict], asn1_classes: Dict[str, Dict], cyclic_edges: set = None) -> Dict:
     """Builds a jinja context containing all type information required to fill the templates / code generation.
 
     Args:
@@ -442,6 +531,9 @@ def asn1TypeToJinjaContext(asn1_type_name: str, asn1_type_info: Dict, asn1_types
     Returns:
         Dict: jinja context
     """
+
+    if cyclic_edges is None:
+        cyclic_edges = findCyclicEdges(asn1_types)
 
     if isinstance(asn1_type_info, list): # list represents the asn1 extension "[[ ]]" notation
         asn1_type_type = "EXTENSION"
@@ -469,7 +561,7 @@ def asn1TypeToJinjaContext(asn1_type_name: str, asn1_type_info: Dict, asn1_types
 
     # components-of
     if "components-of" in asn1_type_info:
-        member_context = asn1TypeToJinjaContext(asn1_type_name, asn1_types[asn1_type_info["components-of"]], asn1_types, asn1_values, asn1_sets, asn1_classes)
+        member_context = asn1TypeToJinjaContext(asn1_type_name, asn1_types[asn1_type_info["components-of"]], asn1_types, asn1_values, asn1_sets, asn1_classes, cyclic_edges)
         context["members"].extend(member_context["members"])
 
     # primitives
@@ -583,7 +675,7 @@ def asn1TypeToJinjaContext(asn1_type_name: str, asn1_type_info: Dict, asn1_types
         for member in asn1_type_info["members"]:
             if member is None:
                 continue
-            member_context = asn1TypeToJinjaContext(asn1_type_name, member, asn1_types, asn1_values, asn1_sets, asn1_classes)
+            member_context = asn1TypeToJinjaContext(asn1_type_name, member, asn1_types, asn1_values, asn1_sets, asn1_classes, cyclic_edges)
             if member_context is None:
                 continue
             if "optional" in member:
@@ -639,8 +731,24 @@ def asn1TypeToJinjaContext(asn1_type_name: str, asn1_type_info: Dict, asn1_types
             member_name = validRosField(f"CHOICE_{member['name']}", is_const=True)
             if "name" in asn1_type_info:
                 member_name = validRosField(f"CHOICE_{asn1_type_info['name']}_{member['name']}", is_const=True)
-            member_context = asn1TypeToJinjaContext(asn1_type_name, member, asn1_types, asn1_values, asn1_sets, asn1_classes)
+            member_context = asn1TypeToJinjaContext(asn1_type_name, member, asn1_types, asn1_values, asn1_sets, asn1_classes, cyclic_edges)
             if member_context is None:
+                # Cyclic dep: skip the field but still emit the CHOICE constant so numbering is correct
+                choice_value = im
+                if "identified_by" in asn1_type_info:
+                    asn1_value_name = member["type"][0].lower() + member["type"][1:] if "type" in member else ""
+                    if asn1_value_name in asn1_values:
+                        choice_value = asn1_values[asn1_value_name]["value"]
+                context["members"].append({
+                    "ros_msg_type": "uint8",
+                    "ros_field_name": validRosField(member_name),
+                    "disabled": True,
+                    "constants": [{
+                        "ros_msg_type": "uint8",
+                        "ros_field_name": validRosField(member_name, is_const=True),
+                        "ros_value": choice_value
+                    }]
+                })
                 continue
             if len(member_context["members"]) > 0:
                 if "name" in asn1_type_info:
@@ -649,13 +757,17 @@ def asn1TypeToJinjaContext(asn1_type_name: str, asn1_type_info: Dict, asn1_types
                         member_context["members"][0]["choice_option_name"] = validCFieldAsGenByAsn1c(member_context["members"][0]["c_field_name"])
                     else:
                         logging.warning(f"expected 'c_field_name' in member context for choice member '{member['name']}' in '{asn1_type_name}'")
-                        member_context["members"][0]["choice_option_name"] = validCFieldAsGenByAsn1c(member_context["members"][0]["ros_field_name"])
-                    member_context["members"][0]["ros_field_name"] = validRosField(f"{asn1_type_info['name']}_{member_context['members'][0]['ros_field_name']}")
+                        member_context["members"][0]["choice_option_name"] = validCFieldAsGenByAsn1c(member["name"])
+                    base_ros_field = member_context["members"][0]["ros_field_name"]
+                    if base_ros_field == "value":
+                        # ENUMERATED inside CHOICE: use the option name to avoid duplicate field names
+                        base_ros_field = validRosField(member["name"])
+                    member_context["members"][0]["ros_field_name"] = validRosField(f"{asn1_type_info['name']}_{base_ros_field}")
                     if "c_field_name" in member_context["members"][0]:
                         member_context["members"][0]["c_field_name"] = validCFieldAsGenByAsn1c(f"{asn1_type_info['name']}_{member_context['members'][0]['c_field_name']}")
                     else:
                         logging.warning(f"expected 'c_field_name' in member context for choice member '{member['name']}' in '{asn1_type_name}'")
-                        member_context["members"][0]["choice_option_name"] = validCFieldAsGenByAsn1c(f"{asn1_type_info['name']}_{member_context['members'][0]['ros_field_name']}")
+                        member_context["members"][0]["choice_option_name"] = validCFieldAsGenByAsn1c(f"{asn1_type_info['name']}_{member['name']}")
                 member_context["members"][0]["is_choice"] = True
                 member_context["members"][0]["choice_var_name"] = name
                 member_context["members"][0]["constants"] = member_context["members"][0].get("constants", [])
@@ -759,7 +871,7 @@ def asn1TypeToJinjaContext(asn1_type_name: str, asn1_type_info: Dict, asn1_types
     # list aka extension "[[ ]]"
     elif asn1_type_type == "EXTENSION":
         for sub_member in asn1_type_info:
-            member_context = asn1TypeToJinjaContext(asn1_type_name, sub_member, asn1_types, asn1_values, asn1_sets, asn1_classes)
+            member_context = asn1TypeToJinjaContext(asn1_type_name, sub_member, asn1_types, asn1_values, asn1_sets, asn1_classes, cyclic_edges)
             member_context["members"][0]["extension_prefix"] = "ext1->"
             if member_context is not None:
                 context["members"].extend(member_context["members"])
@@ -769,6 +881,10 @@ def asn1TypeToJinjaContext(asn1_type_name: str, asn1_type_info: Dict, asn1_types
 
         if asn1_type_type == "RegionalExtension":
             logging.warning(f"Handling of 'RegionalExtension' in '{asn1_type_name}' not yet supported")
+            return None
+
+        if (asn1_type_name, asn1_type_type) in cyclic_edges:
+            logging.warning(f"Skipping member of type '{asn1_type_type}' in '{asn1_type_name}' due to circular dependency")
             return None
 
         name = asn1_type_info["name"] if "name" in asn1_type_info else "value"
@@ -858,7 +974,7 @@ def asn1TypeToJinjaContext(asn1_type_name: str, asn1_type_info: Dict, asn1_types
                                     "name": value[0].upper() + value[1:], # make sure type starts with upper case
                                     "type": value[0].upper() + value[1:] # make sure type starts with upper case
                                 })
-                member_context = asn1TypeToJinjaContext(asn1_type_name, class_member, asn1_types, asn1_values, asn1_sets, asn1_classes)
+                member_context = asn1TypeToJinjaContext(asn1_type_name, class_member, asn1_types, asn1_values, asn1_sets, asn1_classes, cyclic_edges)
                 context["members"].extend(member_context["members"])
 
     elif asn1_type_type == "NULL":

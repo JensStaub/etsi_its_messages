@@ -69,7 +69,7 @@ def loadJinjaTemplate() -> jinja2.environment.Template:
     return jinja_template
 
 
-def asn1TypeToRosMsg(type_name: str, asn1_type: Dict, asn1_types: Dict[str, Dict], asn1_values: Dict[str, Dict], asn1_sets: Dict[str, Dict], asn1_classes: Dict[str, Dict], asn1_raw: Dict[str, str], jinja_template: jinja2.environment.Template) -> str:
+def asn1TypeToRosMsg(type_name: str, asn1_type: Dict, asn1_types: Dict[str, Dict], asn1_values: Dict[str, Dict], asn1_sets: Dict[str, Dict], asn1_classes: Dict[str, Dict], asn1_raw: Dict[str, str], jinja_template: jinja2.environment.Template, cyclic_edges: set = None) -> str:
     """Converts parsed ASN.1 type information to a ROS message file string.
 
     Args:
@@ -81,13 +81,14 @@ def asn1TypeToRosMsg(type_name: str, asn1_type: Dict, asn1_types: Dict[str, Dict
         asn1_classes (Dict[str, Dict]): class information of all classes by name
         asn1_raw (Dict[str, str]): raw string definition by type
         jinja_template (jinja2.environment.Template): jinja template
+        cyclic_edges (set): pre-computed cyclic edges to skip
 
     Returns:
         str: ROS message file string
     """
 
     # build jinja context based on asn1 type information
-    jinja_context = asn1TypeToJinjaContext(type_name, asn1_type, asn1_types, asn1_values, asn1_sets, asn1_classes)
+    jinja_context = asn1TypeToJinjaContext(type_name, asn1_type, asn1_types, asn1_values, asn1_sets, asn1_classes, cyclic_edges)
     if jinja_context is None:
         return None
 
@@ -196,14 +197,7 @@ def main():
 
     checkTypeMembersInAsn1(asn1_types)
 
-    # generate ROS .msg files
-    jinja_template = loadJinjaTemplate()
-    for type_name, asn1_type in (pbar := tqdm(asn1_types.items(), desc="Generating ROS .msg files")):
-        pbar.set_postfix_str(type_name)
-        ros_msg = asn1TypeToRosMsg(type_name, asn1_type, asn1_types, asn1_values, asn1_sets, asn1_classes, asn1_raw, jinja_template)
-        exportRosMsg(ros_msg, type_name, args.output_dir)
-
-    # generate CMakeLists.txt and remove all files that are not required for top-level message type
+    # determine top-level message type
     msg_type = args.type.upper()
     if args.type == "cpm_ts":
         msg_type = "CollectivePerceptionMessage"
@@ -221,6 +215,18 @@ def main():
         msg_type = "SPATEM"
     elif args.type == "vam_ts":
         msg_type = "VAM"
+
+    # pre-compute cyclic edges once (expensive DFS); pass to all type generators
+    cyclic_edges = findCyclicEdges(asn1_types)
+
+    # generate ROS .msg files
+    jinja_template = loadJinjaTemplate()
+    for type_name, asn1_type in (pbar := tqdm(asn1_types.items(), desc="Generating ROS .msg files")):
+        pbar.set_postfix_str(type_name)
+        ros_msg = asn1TypeToRosMsg(type_name, asn1_type, asn1_types, asn1_values, asn1_sets, asn1_classes, asn1_raw, jinja_template, cyclic_edges)
+        exportRosMsg(ros_msg, type_name, args.output_dir)
+
+    # generate CMakeLists.txt and remove all files that are not required for top-level message type
     msg_files = findDependenciesOfRosMessageType(os.path.join(args.output_dir, f"{msg_type}.msg"), [msg_type])
     msg_files += additionalMessageTypes(args.output_dir, msg_type)
     msg_files = sortMessageFiles(msg_files)
