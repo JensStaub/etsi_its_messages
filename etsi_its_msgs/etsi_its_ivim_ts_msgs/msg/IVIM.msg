@@ -31,7 +31,7 @@
 #   asn1/raw/is_ts103301/iso-patched/ISO14823-missing.asn
 #   asn1/raw/is_ts103301/build/asn1/TS17419_2014_CITSapplMgmtIDs.asn
 #   asn1/raw/is_ts103301/iso-patched/ISO14906(2018)EfcDsrcGenericv7-patched.asn
-#   asn1/raw/is_ts103301/iso-patched/ISO14906(2018)EfcDsrcApplicationv6-patched.asn
+#   asn1/patched/is_ts103301/iso-patched/ISO14906(2018)EfcDsrcApplicationv6-patched.asn
 #   asn1/raw/is_ts103301/build/asn1/ISO-TS-19091-addgrp-C-2018-patched.asn
 #   asn1/patched/is_ts103301/build/asn1/ISO14816_AVIAEINumberingAndDataStructures.asn
 #   asn1/raw/is_ts103301/build/asn1/ISO19321IVIv2.asn
